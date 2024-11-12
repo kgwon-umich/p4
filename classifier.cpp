@@ -77,6 +77,8 @@ class classifier {
         totalPosts = total_in;
     }
     void updateTotalPosts(int total_in) {
+        // also update posts size
+        postsSize = posts.size();
         totalPosts = total_in;
     }
     void addPost(const Post* post_in) {
@@ -87,7 +89,7 @@ class classifier {
         words.insert(words_in.begin(), words_in.end());
     }
     double get_log_prior() const {
-        return log(posts.size() / (double) totalPosts);
+        return log(postsSize / (double) totalPosts);
     }
     int get_count_of(const string& word) {
         if (labelCounts.find(word) != labelCounts.end()) {
@@ -131,7 +133,7 @@ class classifier {
     bool calculate_log_likelihood(const string& word) {
         int containing = get_count_of(word);
         if (containing > 0) {
-            likelihoods[word] = log(containing / (double) posts.size());
+            likelihoods[word] = log(containing / (double) postsSize);
             return true;
         }
         // TODO:
@@ -151,7 +153,7 @@ class classifier {
     // }
 
     int get_size() const {
-        return posts.size();
+        return postsSize;
     }
 
     void print_basic() const {
@@ -175,6 +177,7 @@ class classifier {
     map<string, int> labelCounts;
     map<string, double> likelihoods;
     vector<const Post*> posts;
+    int postsSize;
     int totalPosts;
 };
 
@@ -220,8 +223,9 @@ class dataSet {
         }
         // auto start = chrono::high_resolution_clock::now();
         // now update the total # of posts member of each classifier
+        totalPosts = posts.size();
         for (auto &c:classifiers) {
-            c.second.updateTotalPosts(get_data_size());
+            c.second.updateTotalPosts(totalPosts);
             // c.second.calculate_likelihoods(); // !IMPORTANT
         }
         // calculate_all_likelihoods();
@@ -245,12 +249,12 @@ class dataSet {
             // if word is in unique words
             if (allWords.find(word) != allWords.end()) {
                 likelihood = log(get_all_posts_containing(word) / 
-                                        (double) posts.size());
+                                        (double) totalPosts);
                 classifiers.at(label).insert_log_likelihood(word, likelihood);
             }
             // if word is nowhere in any training post
             else {
-                likelihood = log(1 / (double) posts.size());
+                likelihood = log(1 / (double) totalPosts);
                 classifiers.at(label).insert_log_likelihood(word, likelihood);
             }
         }
@@ -306,7 +310,7 @@ class dataSet {
     }
 
     int get_data_size() const {
-        return posts.size();
+        return totalPosts;
     }
 
     int get_vocab_size() const {
@@ -331,6 +335,7 @@ class dataSet {
     map<string, classifier> classifiers;
     set<string> allWords;
     vector<Post*> posts;
+    int totalPosts;
 };
 
 class dataSetTester {
@@ -349,6 +354,7 @@ class dataSetTester {
 
     void calculate_predictions() {
         totalCorrect = 0;
+        postsSize = posts.size();
         for (auto &post:posts) {
             set<string> allLabels = ds->get_all_labels();
             string predicted = *allLabels.begin();
@@ -383,7 +389,7 @@ class dataSetTester {
             cout << endl;
         }
         cout << "performance: " << totalCorrect
-             << " / " << posts.size()
+             << " / " << postsSize
              << " posts predicted correctly"
              << endl;
     }
@@ -397,6 +403,7 @@ class dataSetTester {
   private:
     dataSet* ds;
     vector<Post*> posts;
+    int postsSize;
     vector<tuple<Post*, string, double>> results;
     int totalCorrect;
 };
